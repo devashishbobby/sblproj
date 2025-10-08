@@ -28,7 +28,6 @@ body {
   line-height: 1.6;
 }
 
-/* 🧭 Navbar (now translucent with blur) */
 .navbar {
   display: flex;
   justify-content: space-between;
@@ -66,7 +65,6 @@ nav ul {
   color: var(--accent);
 }
 
-/* 🧘 Hero Section */
 .hero {
   display: flex;
   justify-content: center;
@@ -75,7 +73,6 @@ nav ul {
   min-height: 100vh;
   padding: 0 16px;
   background: var(--bg);
-  margin-top: 60px;
 }
 
 .hero-content h1 {
@@ -88,6 +85,66 @@ nav ul {
   margin-bottom: 24px;
 }
 
+.cta-container {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: center;
+  margin-top: 32px;
+}
+
+.cta-container .cta {
+  width: 100%;
+  max-width: 320px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+}
+
+.modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  display: none;
+  justify-content: center;
+  align-items: center;
+  z-index: 2000;
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  backdrop-filter: blur(5px);
+}
+
+.modal-backdrop.open {
+  display: flex;
+  opacity: 1;
+}
+
+.modal-content {
+  background: var(--surface);
+  padding: 32px;
+  border-radius: var(--radius);
+  text-align: center;
+  border: 1px solid var(--divider);
+  transform: translateY(-20px);
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+
+.modal-backdrop.open .modal-content {
+  transform: translateY(0);
+  opacity: 1;
+}
+
+.modal-content .small-text {
+  font-size: 0.85rem;
+  color: var(--muted);
+  margin-top: 8px;
+}
+
 .cta {
   background: var(--accent);
   color: var(--text);
@@ -96,6 +153,8 @@ nav ul {
   text-decoration: none;
   transition: background var(--transition), transform var(--transition);
   display: inline-block;
+  cursor: pointer;
+  border: 1px solid transparent;
 }
 
 .cta:hover {
@@ -104,26 +163,27 @@ nav ul {
 }
 
 .secondary-cta {
-  margin-top: 32px;
-  display: inline-block;
+  margin-top: 0;
   background: transparent;
   color: var(--accent);
   border: 1px solid var(--accent);
-  transition: background var(--transition), color var(--transition), transform var(--transition);
 }
 
 .secondary-cta:hover {
   background: var(--accent);
   color: var(--text);
-  transform: scale(1.05);
   box-shadow: 0 0 12px rgba(255, 107, 0, 0.3);
 }
 
-/* 🧭 Tracker Preview */
+.tracker-cta {
+    margin-top: 32px;
+}
+
 .tracker-preview {
   padding: 80px 16px;
   text-align: center;
-  background: var(--surface);
+  background-color: var(--bg);
+  border-top: 1px solid var(--divider);
 }
 
 .tracker-preview h2 {
@@ -138,7 +198,7 @@ nav ul {
 }
 
 .card {
-  background: var(--bg);
+  background: var(--surface);
   border: 1px solid var(--divider);
   border-radius: var(--radius);
   padding: 24px;
@@ -150,9 +210,9 @@ nav ul {
 }
 
 .contact {
-  padding: 48px 16px;
+  padding: 80px 16px;
   text-align: center;
-  background: var(--surface);
+  background-color: var(--bg);
   border-top: 1px solid var(--divider);
 }
 
@@ -171,7 +231,7 @@ nav ul {
 
 .form-row {
   display: flex;
-  gap: 8px;
+  gap: 12px;
 }
 
 .form-row input {
@@ -183,7 +243,7 @@ nav ul {
   padding: 10px;
   border: 1px solid var(--divider);
   border-radius: var(--radius);
-  background: var(--bg);
+  background: var(--surface);
   color: var(--text);
   font-size: 0.9rem;
 }
@@ -200,7 +260,6 @@ nav ul {
   margin-top: 4px;
 }
 
-/* 🦶 Minimal Footer */
 .footer {
   text-align: center;
   font-size: 0.85rem;
@@ -210,14 +269,12 @@ nav ul {
   border-top: 1px solid var(--divider);
 }
 
-/* 📱 Responsive Adjustments */
 @media (max-width: 600px) {
   .hero-content h1 {
     font-size: 1.8rem;
   }
 }
 
-/* 🌄 Section Reveal Animations */
 .fade-in {
   opacity: 0;
   transform: translateY(30px);
@@ -229,7 +286,6 @@ nav ul {
   transform: translateY(0);
 }
 
-/* Hero animation */
 .hero-content {
   opacity: 0;
   transform: translateY(40px);
@@ -244,17 +300,9 @@ nav ul {
   }
 }
 
-/* 🎬 Hero Background */
 .hero {
   position: relative;
   overflow: hidden;
-  min-height: 90vh;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  padding: 0 16px;
-  color: var(--text);
 }
 
 .hero-bg {
@@ -272,15 +320,10 @@ nav ul {
   transform: scale(1.05);
 }
 
-/* Text Layer Above Background */
 .hero-content {
   position: relative;
   z-index: 2;
   max-width: 600px;
-  opacity: 0;
-  transform: translateY(40px);
-  animation: heroFadeIn 1.2s ease forwards;
-  animation-delay: 0.3s;
 }
 
 .hero::after {
@@ -291,77 +334,11 @@ nav ul {
   z-index: 1;
 }
 
-/* --- Contact Form Styles --- */
-.contact {
-  background-color: #111;
-  padding: 60px 20px;
-  text-align: center;
-}
-
-.contact form {
-  max-width: 500px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.form-row {
-  display: flex;
-  gap: 10px;
-}
-
-.contact input,
-.contact textarea {
-  flex: 1;
-  padding: 10px;
-  border-radius: 6px;
-  border: 1px solid #333;
-  background: #151515;
-  color: #fff;
-  font-family: 'Inter', sans-serif;
-  font-size: 14px;
-}
-
-.contact input:focus,
-.contact textarea:focus {
-  outline: 2px solid #FF6B00;
-}
-
-/* --- Form Messages --- */
-.form-msg {
-  font-size: 14px;
-  margin-top: 8px;
-  color: #FF6B00;
-  min-height: 20px;
-}
-
-/* --- Footer --- */
-.footer {
-  background: #0f0f0f;
-  color: #aaa;
-  padding: 15px;
-  text-align: center;
-  font-size: 13px;
-  border-top: 1px solid #232323;
-}
-
-.footer {
-  text-align: center;
-  padding: 1rem 0;
-  background: rgba(255, 255, 255, 0.05);
-  color: #bbb;
-  font-size: 0.9rem;
-  margin-top: 2rem;
-}
-
-.footer p {
-  margin: 0;
-}
-
 #form-msg {
   text-align: center;
   font-weight: 500;
   margin-top: 0.5rem;
+  min-height: 20px;
   transition: color 0.3s ease;
 }
+
