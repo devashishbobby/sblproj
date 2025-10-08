@@ -172,6 +172,11 @@
                         Home
                     </a>
                 </li>
+                 <li id="logout-item" class="hidden">
+                    <button id="logout-btn" class="w-full flex items-center p-3 rounded-lg text-lg hover:bg-gray-800 transition-colors">
+                        <i class="fa-solid fa-sign-out-alt w-6 mr-3"></i>Logout
+                    </button>
+                </li>
             </ul>
         </nav>
     </div>
@@ -205,12 +210,8 @@
             </div>
 
             <div class="flex justify-center space-x-4">
-                <button id="start-btn" class="btn-primary px-8 py-3 rounded-xl font-bold text-lg" disabled>
-                    <i class="fa-solid fa-play mr-2"></i> Start
-                </button>
-                <button id="pause-btn" class="btn-secondary px-8 py-3 rounded-xl font-bold text-lg" disabled>
-                    <i class="fa-solid fa-pause mr-2"></i> Pause
-                </button>
+                <button id="start-btn" class="btn-primary px-8 py-3 rounded-xl font-bold text-lg" disabled><i class="fa-solid fa-play mr-2"></i>Start</button>
+                <button id="pause-btn" class="btn-secondary px-8 py-3 rounded-xl font-bold text-lg" disabled><i class="fa-solid fa-pause mr-2"></i>Pause</button>
             </div>
         </section>
 
@@ -222,10 +223,7 @@
                     <i class="fa-solid fa-plus"></i>
                 </button>
             </div>
-            <ul id="task-list" class="space-y-2">
-                <!-- Tasks will be rendered here by JS -->
-                <li class="flex justify-center text-gray-500 py-4">Loading tasks...</li>
-            </ul>
+            <ul id="task-list" class="space-y-2"></ul>
         </section>
 
         <!-- Footer / Status Bar -->
@@ -234,7 +232,7 @@
         </footer>
     </div>
 
-    <!-- ⚙️ Settings Modal -->
+    <!-- Modals -->
     <div id="settings-modal-backdrop" class="modal-backdrop fixed inset-0 z-40 flex items-center justify-center">
         <div class="modal-content p-6 rounded-xl w-full max-w-sm">
             <h3 class="text-2xl font-bold mb-4 text-white">Adjust Settings</h3>
@@ -258,8 +256,6 @@
             </form>
         </div>
     </div>
-
-    <!-- 💬 Custom Dialog/Prompt Modal -->
     <div id="custom-dialog-backdrop" class="modal-backdrop fixed inset-0 z-50 flex items-center justify-center">
         <div id="custom-dialog-content" class="modal-content p-6 rounded-xl w-full max-w-sm">
             <p id="dialog-message" class="text-lg mb-4 text-white"></p>
@@ -274,16 +270,12 @@
     </div>
 
     <script type="module">
-      // --- ⚙️ Firebase Setup ---
       import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-      import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+      import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
       import { getFirestore, doc, setDoc, onSnapshot, collection, query, deleteDoc, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
       document.addEventListener('DOMContentLoaded', () => {
-        // Global Firebase variables provided by Canvas environment
-        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
-        
-        // Your web app's Firebase configuration
+        const appId = 'default-app-id'; // Fallback
         const firebaseConfig = {
           apiKey: "AIzaSyDbopHBMCkJ_5mKyZfQp3mGK7zHfOyswQY",
           authDomain: "focusflow-tracker-7307d.firebaseapp.com",
@@ -293,26 +285,17 @@
           appId: "1:553409175215:web:de3cd1a3c46e36e7bdfe5a"
         };
 
-        const initialAuthToken = typeof __initial_auth_token !== 'undefined' ? __initial_auth_token : null;
-
         let db, auth;
-        let unsubscribeSettings; 
-        let unsubscribeTasks;    
+        let unsubscribeSettings, unsubscribeTasks;     
         let isLocalMode = false;
 
-        // --- 🧠 Application State ---
         let appState = {
             settings: { focus: 25, shortBreak: 5, longBreak: 15 }, 
-            tasks: [],
-            timeRemainingSeconds: 25 * 60,
-            currentSessionType: 'focus',
-            isRunning: false,
-            timerInterval: null,
-            userId: null,
-            pomodoroCount: 0, 
+            tasks: [], timeRemainingSeconds: 25 * 60, currentSessionType: 'focus',
+            isRunning: false, timerInterval: null, userId: null, pomodoroCount: 0, 
         };
 
-        // --- 🏠 DOM Elements ---
+        // DOM Elements
         const timerDisplay = document.getElementById('timer-display');
         const sessionLabel = document.getElementById('session-label');
         const timerSection = document.getElementById('timer-section');
@@ -325,8 +308,8 @@
         const userInfoElement = document.getElementById('user-info');
         const appStatus = document.getElementById('app-status');
         const settingsModalBackdrop = document.getElementById('settings-modal-backdrop');
-        const settingsForm = document.getElementById('settings-form');
         const cancelSettingsButton = document.getElementById('cancel-settings');
+        const settingsForm = document.getElementById('settings-form');
         const inputFocus = document.getElementById('focus-time');
         const inputShort = document.getElementById('short-break-time');
         const inputLong = document.getElementById('long-break-time');
@@ -339,119 +322,87 @@
         const menuButton = document.getElementById('menu-btn');
         const sidebar = document.getElementById('sidebar');
         const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+        const logoutItem = document.getElementById('logout-item');
+        const logoutBtn = document.getElementById('logout-btn');
 
-        let currentConfirmCallback = null;
-        let currentCancelCallback = null;
-        let isPromptMode = false;
+        let currentConfirmCallback = null, currentCancelCallback = null, isPromptMode = false;
 
-        // --- 📢 Custom Dialog Functions ---
-        const showCustomDialog = (message, onConfirm = null, onCancel = null, isPrompt = false, placeholder = '') => {
+        // --- Dialog Functions ---
+        const showCustomDialog = (message, onConfirm, onCancel, isPrompt, placeholder) => {
             dialogMessage.textContent = message;
             currentConfirmCallback = onConfirm;
             currentCancelCallback = onCancel;
             isPromptMode = isPrompt;
-
+            dialogInputContainer.classList.toggle('hidden', !isPrompt);
             if (isPrompt) {
-                dialogInputContainer.classList.remove('hidden');
                 dialogInput.value = '';
                 dialogInput.placeholder = placeholder;
-                dialogCancelBtn.classList.remove('hidden');
-            } else if (onConfirm && onCancel) {
-                dialogInputContainer.classList.add('hidden');
-                dialogCancelBtn.classList.remove('hidden');
-            } else {
-                dialogInputContainer.classList.add('hidden');
-                dialogCancelBtn.classList.add('hidden');
             }
+            dialogCancelBtn.classList.toggle('hidden', !onCancel);
             dialogBackdrop.classList.add('open');
         };
 
-        const hideCustomDialog = () => {
-            dialogBackdrop.classList.remove('open');
-            currentConfirmCallback = null;
-            currentCancelCallback = null;
-            isPromptMode = false;
-        };
-
-        const handleConfirm = () => {
-            let result = true;
-            if (isPromptMode) result = dialogInput.value;
-            if (currentConfirmCallback) currentConfirmCallback(result);
-            hideCustomDialog();
-        };
-
-        const handleCancel = () => {
-            if (currentCancelCallback) currentCancelCallback(null);
-            hideCustomDialog();
-        };
+        const hideCustomDialog = () => dialogBackdrop.classList.remove('open');
         
-        // --- 🛠️ Utility Functions ---
+        // --- Utility ---
         const updateStatus = (message, isLoading = false) => {
             appStatus.innerHTML = isLoading ? `<span class="loading-spinner"></span> ${message}` : message;
         };
-
-        const formatTime = (totalSeconds) => {
-            const minutes = Math.floor(totalSeconds / 60);
-            const seconds = totalSeconds % 60;
-            return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
-        };
-
+        const formatTime = (s) => `${String(Math.floor(s/60)).padStart(2,'0')}:${String(s%60).padStart(2,'0')}`;
         const updateTimerDisplay = () => {
+            document.title = `${formatTime(appState.timeRemainingSeconds)} - FocusFlow`;
             timerDisplay.textContent = formatTime(appState.timeRemainingSeconds);
-            const minutes = appState.settings[appState.currentSessionType];
-            let labelText;
-            if (appState.currentSessionType === 'focus') {
-                labelText = `Focus Session (${minutes} min) | Pomodoros: ${appState.pomodoroCount}`;
-            } else if (appState.currentSessionType === 'shortBreak') {
-                labelText = `Short Break (${minutes} min)`;
-            } else if (appState.currentSessionType === 'longBreak') {
-                labelText = `Long Break (${minutes} min)`;
-            }
-            sessionLabel.textContent = labelText;
+            const mins = appState.settings[appState.currentSessionType];
+            let label = `Focus Session (${mins} min) | Pomodoros: ${appState.pomodoroCount}`;
+            if (appState.currentSessionType === 'shortBreak') label = `Short Break (${mins} min)`;
+            if (appState.currentSessionType === 'longBreak') label = `Long Break (${mins} min)`;
+            sessionLabel.textContent = label;
             timerSection.classList.toggle('running', appState.isRunning);
             startButton.disabled = appState.isRunning;
             pauseButton.disabled = !appState.isRunning;
         };
-
         const switchSession = (newType) => {
             if (appState.isRunning) return;
-            appState.timeRemainingSeconds = appState.settings[newType] * 60;
             appState.currentSessionType = newType;
+            appState.timeRemainingSeconds = appState.settings[newType] * 60;
             switches.forEach(s => s.classList.remove('active'));
             document.querySelector(`.switch[data-type="${newType}"]`)?.classList.add('active');
             updateTimerDisplay();
         };
 
-        // --- ⏰ Timer Logic ---
+        // --- Timer Logic ---
         const tick = () => {
-            if (appState.timeRemainingSeconds > 0) {
-                appState.timeRemainingSeconds--;
-                updateTimerDisplay();
-            } else {
+            appState.timeRemainingSeconds--;
+            if (appState.timeRemainingSeconds < 0) {
                 clearInterval(appState.timerInterval);
                 appState.isRunning = false;
-                const audio = new Audio('data:audio/wav;base64,UklGRl9vT1JXQVZFZm10IBAAAAABAAEARKwAAIhYAQACABAAAABkYXRhAAH4AAAA');
-                audio.play().catch(() => {});
-                let nextType;
+                new Audio('ring.mp3').play().catch(()=>{});
+                let nextType = 'focus';
                 if (appState.currentSessionType === 'focus') {
                     appState.pomodoroCount++;
-                    nextType = appState.pomodoroCount >= 4 ? 'longBreak' : 'shortBreak';
-                    if (nextType === 'longBreak') appState.pomodoroCount = 0;
-                } else {
-                    nextType = 'focus';
+                    nextType = appState.pomodoroCount % 4 === 0 ? 'longBreak' : 'shortBreak';
+                    
+                    // Save the new count
+                    if (isLocalMode) {
+                        // For guests, use browser's local storage
+                        localStorage.setItem('focusflow_pomodoroCount', appState.pomodoroCount);
+                    } else {
+                        // For logged-in users, update the Firestore document
+                        const settingsRef = doc(db, `artifacts/${appId}/users/${appState.userId}/settings/pomodoro`);
+                        updateDoc(settingsRef, { pomodoroCount: appState.pomodoroCount });
+                    }
                 }
                 switchSession(nextType);
-                showCustomDialog(`Time is up! Starting ${nextType.replace('B', ' B')}.`, handleConfirm);
+                showCustomDialog(`Time is up! Starting ${nextType.replace('B', ' B')}.`, () => {}, null);
             }
+            updateTimerDisplay();
         };
-
         const startTimer = () => {
             if (appState.isRunning) return;
             appState.isRunning = true;
             appState.timerInterval = setInterval(tick, 1000);
             updateTimerDisplay();
         };
-
         const pauseTimer = () => {
             if (!appState.isRunning) return;
             appState.isRunning = false;
@@ -459,99 +410,71 @@
             updateTimerDisplay();
         };
 
-        // --- 🧱 Data Logic (Firestore & Local) ---
-        const settingsDocPath = () => `artifacts/${appId}/users/${appState.userId}/settings/pomodoro`;
-        const tasksCollectionPath = () => `artifacts/${appId}/users/${appState.userId}/tasks`;
-
-        const setupSettingsListener = () => {
-            if (isLocalMode) return;
+        // --- Data Logic ---
+        const setupFirebaseListeners = () => {
             if (unsubscribeSettings) unsubscribeSettings();
-            const settingsRef = doc(db, settingsDocPath());
-            unsubscribeSettings = onSnapshot(settingsRef, (docSnap) => {
+            unsubscribeSettings = onSnapshot(doc(db, `artifacts/${appId}/users/${appState.userId}/settings/pomodoro`), (docSnap) => {
                 if (docSnap.exists()) {
-                    const savedSettings = docSnap.data();
-                    appState.settings = {
-                        focus: savedSettings.focus || 25,
-                        shortBreak: savedSettings.shortBreak || 5,
-                        longBreak: savedSettings.longBreak || 15,
-                    };
+                    const data = docSnap.data();
+                    appState.settings = { ...appState.settings, ...data };
+                    // Check for the saved count and update our app state
+                    if (data.pomodoroCount !== undefined) {
+                        appState.pomodoroCount = data.pomodoroCount;
+                    }
                 } else {
-                    setDoc(settingsRef, appState.settings).catch(e => console.error("Error setting default settings:", e));
+                     // If the doc doesn't exist, create it with the default count of 0
+                    setDoc(doc(db, `artifacts/${appId}/users/${appState.userId}/settings/pomodoro`), { ...appState.settings, pomodoroCount: 0 });
                 }
                 if (!appState.isRunning) switchSession(appState.currentSessionType);
-                updateStatus('Ready to Focus!', false);
+                updateStatus('Ready!', false);
                 startButton.disabled = false;
-            }, (error) => {
-                console.error("Error listening to settings:", error);
-                updateStatus('Error loading settings.', false);
+            });
+            if (unsubscribeTasks) unsubscribeTasks();
+            unsubscribeTasks = onSnapshot(query(collection(db, `artifacts/${appId}/users/${appState.userId}/tasks`)), (snapshot) => {
+                appState.tasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).sort((a,b) => a.createdAt - b.createdAt);
+                renderTasks();
             });
         };
-
-        const setupTasksListener = () => {
-            if (isLocalMode) return;
-            if (unsubscribeTasks) unsubscribeTasks();
-            const q = query(collection(db, tasksCollectionPath()));
-            unsubscribeTasks = onSnapshot(q, (snapshot) => {
-                let loadedTasks = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                appState.tasks = loadedTasks.sort((a, b) => a.createdAt - b.createdAt);
-                renderTasks();
-            }, (error) => console.error("Error listening to tasks:", error));
-        };
-
         const saveSettings = async (e) => {
             e.preventDefault();
             const newSettings = {
-                focus: parseInt(inputFocus.value),
-                shortBreak: parseInt(inputShort.value),
-                longBreak: parseInt(inputLong.value),
+                focus: parseInt(inputFocus.value), shortBreak: parseInt(inputShort.value), longBreak: parseInt(inputLong.value),
             };
-
             if (isLocalMode) {
                 appState.settings = newSettings;
                 if (!appState.isRunning) switchSession(appState.currentSessionType);
-                updateStatus('Settings updated for this session.', false);
             } else {
-                await setDoc(doc(db, settingsDocPath()), newSettings);
+                 const settingsRef = doc(db, `artifacts/${appId}/users/${appState.userId}/settings/pomodoro`);
+                 await updateDoc(settingsRef, newSettings); // Use updateDoc to avoid overwriting pomodoroCount
             }
             closeSettingsModal();
         };
-
         const addTask = async (title) => {
             const newTask = { title: title, completed: false, createdAt: Date.now() };
             if (isLocalMode) {
                 newTask.id = `local_${Date.now()}`;
                 appState.tasks.push(newTask);
                 renderTasks();
-            } else {
-                await addDoc(collection(db, tasksCollectionPath()), newTask);
-            }
+            } else await addDoc(collection(db, `artifacts/${appId}/users/${appState.userId}/tasks`), newTask);
         };
-
         const toggleTask = async (taskId, isCompleted) => {
             if (isLocalMode) {
                 const task = appState.tasks.find(t => t.id === taskId);
                 if (task) task.completed = isCompleted;
-                renderTasks();
-            } else {
-                await updateDoc(doc(db, tasksCollectionPath(), taskId), { completed: isCompleted });
-            }
+            } else await updateDoc(doc(db, `artifacts/${appId}/users/${appState.userId}/tasks`, taskId), { completed: isCompleted });
+            renderTasks();
         };
-
         const deleteTask = async (taskId) => {
-             if (isLocalMode) {
-                appState.tasks = appState.tasks.filter(t => t.id !== taskId);
-                renderTasks();
-            } else {
-                await deleteDoc(doc(db, tasksCollectionPath(), taskId));
-            }
+            if (isLocalMode) appState.tasks = appState.tasks.filter(t => t.id !== taskId);
+            else await deleteDoc(doc(db, `artifacts/${appId}/users/${appState.userId}/tasks`, taskId));
+            renderTasks();
         };
 
-        // --- 🎨 Task Rendering ---
+        // --- Rendering ---
         const renderTasks = () => {
             taskList.innerHTML = '';
             if (appState.tasks.length === 0) {
-                const message = isLocalMode ? 'Add a task for this session!' : 'No tasks yet. Add one!';
-                taskList.innerHTML = `<li class="flex justify-center text-gray-500 p-4">${message}</li>`;
+                taskList.innerHTML = `<li class="flex justify-center text-gray-500 p-4">No tasks yet. Add one!</li>`;
                 return;
             }
             appState.tasks.forEach(task => {
@@ -561,123 +484,114 @@
                 li.innerHTML = `
                     <input type="checkbox" ${task.completed ? 'checked' : ''} class="task-checkbox h-5 w-5 rounded border-gray-400 bg-gray-700 text-accent focus:ring-accent">
                     <span class="task-title flex-grow ml-3 ${task.completed ? 'completed' : ''}">${task.title}</span>
-                    <button class="delete-task btn-icon text-sm hover:text-red-500" data-id="${task.id}">
-                        <i class="fa-solid fa-trash"></i>
-                    </button>
+                    <button class="delete-task btn-icon text-sm hover:text-red-500"><i class="fa-solid fa-trash"></i></button>
                 `;
                 taskList.appendChild(li);
             });
         };
 
-        // --- ⚙️ Modal & Sidebar Handlers ---
+        // --- UI Handlers ---
         const openSettingsModal = () => {
             inputFocus.value = appState.settings.focus;
             inputShort.value = appState.settings.shortBreak;
             inputLong.value = appState.settings.longBreak;
             settingsModalBackdrop.classList.add('open');
         };
-
-        const closeSettingsModal = () => {
-            settingsModalBackdrop.classList.remove('open');
-        };
-        
+        const closeSettingsModal = () => settingsModalBackdrop.classList.remove('open');
         const toggleSidebar = () => {
             sidebar.classList.toggle('open');
             sidebarBackdrop.classList.toggle('open');
         };
 
-        // --- 🚀 Initialization ---
+        // --- Initialization ---
         const initializeLocalMode = () => {
             isLocalMode = true;
-            console.warn("Firebase config is missing or invalid. Running in local-only mode.");
-            updateStatus('Running in local-only mode. Data will not be saved.', false);
-            userInfoElement.textContent = 'Backend not configured.';
-            
+
+            // Try to load the saved count from local storage for the guest
+            const savedCount = localStorage.getItem('focusflow_pomodoroCount');
+            if (savedCount) {
+                appState.pomodoroCount = parseInt(savedCount, 10) || 0;
+            }
+
+            updateStatus('Running in Guest Mode. Data will not be saved.', false);
+            userInfoElement.textContent = 'Guest User';
+            logoutItem.classList.add('hidden');
             renderTasks();
-            
             switchSession('focus');
             startButton.disabled = false;
         };
-
-        const init = async () => {
+        
+        const init = () => {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('guest') === 'true') {
+                initializeLocalMode();
+            } else {
+                try {
+                    const app = initializeApp(firebaseConfig);
+                    auth = getAuth(app);
+                    db = getFirestore(app);
+                    updateStatus('Authenticating...', true);
+                    onAuthStateChanged(auth, (user) => {
+                        if (user) {
+                            appState.userId = user.uid;
+                            userInfoElement.textContent = user.displayName || 'Authenticated User';
+                            logoutItem.classList.remove('hidden');
+                            if(!appState.isRunning) {
+                                setupFirebaseListeners();
+                            }
+                        } else if (auth.currentUser === null) { 
+                           window.location.href = 'index.html';
+                        }
+                    });
+                } catch (error) {
+                    console.error("Firebase Init Error:", error);
+                    updateStatus('Failed to connect to backend.', false);
+                    initializeLocalMode(); 
+                }
+            }
             const hour = new Date().getHours();
             let greeting = 'Ready to Focus?';
             if (hour < 12) greeting = 'Good Morning ☀️';
             else if (hour < 18) greeting = 'Good Afternoon ☕';
             else greeting = 'Good Evening 🌙';
             document.getElementById('greeting-text').textContent = greeting;
-            
-            if (!firebaseConfig || !firebaseConfig.apiKey) {
-                initializeLocalMode();
-                return;
-            }
-
-            try {
-                const app = initializeApp(firebaseConfig);
-                db = getFirestore(app);
-                auth = getAuth(app);
-                updateStatus('Authenticating...', true);
-                onAuthStateChanged(auth, (user) => {
-                    if (user) {
-                        appState.userId = user.uid;
-                        userInfoElement.textContent = `User ID: ${user.uid}`;
-                        setupSettingsListener();
-                        setupTasksListener();
-                    } else {
-                        updateStatus('Waiting for authentication...', true);
-                    }
-                });
-                if (initialAuthToken) await signInWithCustomToken(auth, initialAuthToken);
-                else await signInAnonymously(auth);
-            } catch (error) {
-                console.error("Firebase Initialization Error:", error);
-                updateStatus('Failed to connect to backend. Check console.', false);
-                initializeLocalMode(); 
-            }
         };
 
-        // --- 🎯 Event Listeners ---
+        // --- Event Listeners ---
         startButton.addEventListener('click', startTimer);
         pauseButton.addEventListener('click', pauseTimer);
         settingsButton.addEventListener('click', openSettingsModal);
         cancelSettingsButton.addEventListener('click', closeSettingsModal);
         settingsForm.addEventListener('submit', saveSettings);
-        settingsModalBackdrop.addEventListener('click', (e) => { if (e.target === settingsModalBackdrop) closeSettingsModal(); });
-        switches.forEach(button => button.addEventListener('click', (e) => switchSession(e.target.dataset.type)));
-        
+        switches.forEach(b => b.addEventListener('click', (e) => switchSession(e.target.dataset.type)));
         addTaskButton.addEventListener('click', () => {
-            showCustomDialog(
-                "Add a new task", 
-                (title) => { if (title && title.trim()) addTask(title.trim()); }, 
-                null,
-                true, 
-                "What's the next big thing?"
-            );
+            showCustomDialog("Add a new task", (title) => { 
+                if (title && title.trim()) addTask(title.trim()); 
+            }, () => {}, true, "What's the next big thing?");
         });
-
         taskList.addEventListener('click', (e) => {
             const taskItem = e.target.closest('li');
-            if (!taskItem) return;
-
-            const taskId = taskItem.dataset.id;
-            if (e.target.closest('.delete-task')) {
-                // BUG FIX: Directly delete the task without confirmation
-                deleteTask(taskId);
-            } else if (e.target.matches('.task-checkbox')) {
-                toggleTask(taskId, e.target.checked);
-            }
+            const taskId = taskItem?.dataset.id;
+            if (!taskId) return;
+            if (e.target.closest('.delete-task')) deleteTask(taskId);
+            else if (e.target.matches('.task-checkbox')) toggleTask(taskId, e.target.checked);
         });
-        
         menuButton.addEventListener('click', toggleSidebar);
         sidebarBackdrop.addEventListener('click', toggleSidebar);
-
-        dialogConfirmBtn.addEventListener('click', handleConfirm);
-        dialogCancelBtn.addEventListener('click', handleCancel);
-        dialogBackdrop.addEventListener('click', (e) => { if (e.target === dialogBackdrop) hideCustomDialog(); });
-
+        logoutBtn.addEventListener('click', () => signOut(auth));
+        
+        dialogConfirmBtn.addEventListener('click', () => {
+            if (currentConfirmCallback) currentConfirmCallback(isPromptMode ? dialogInput.value : true);
+            hideCustomDialog();
+        });
+        dialogCancelBtn.addEventListener('click', () => {
+            if (currentCancelCallback) currentCancelCallback(null);
+            hideCustomDialog();
+        });
+        
         init();
       });
-    </script>
+</script>
 </body>
 </html>
 
