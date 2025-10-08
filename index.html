@@ -6,6 +6,8 @@
   <title>FocusFlow — Your Calm Space to Track Progress</title>
   <link rel="stylesheet" href="style.css" />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <!-- Added Font Awesome for Google Icon -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
 <body>
   <!-- 🌙 Navbar -->
@@ -30,8 +32,15 @@
     <div class="hero-content">
       <h1>Your Calm Space to Track Progress</h1>
       <p>Stay focused. Build habits. Grow slowly, but surely.</p>
-      <a href="tracker.html" class="cta">Start Tracking</a>
-
+      <!-- Login/Signup/Guest options -->
+      <div class="cta-container">
+        <button id="login-btn" class="cta">
+            <i class="fab fa-google"></i> Log In with Google
+        </button>
+        <button id="guest-btn" class="cta secondary-cta">
+            Continue as Guest
+        </button>
+      </div>
     </div>
   </section>
 
@@ -44,7 +53,7 @@
       <div class="card">Task Tracker</div>
       <div class="card">Daily Insights</div>
     </div>
-    <a href="tracker.html" class="cta secondary-cta">Start Tracking</a>
+    <a href="#contact" class="cta secondary-cta tracker-cta">Get In Touch</a>
   </section>
 
   <!-- 📩 Contact Form -->
@@ -57,18 +66,24 @@
       </div>
       <textarea id="message" name="message" rows="3" placeholder="Message..." required></textarea>
       <button type="submit" class="cta">Send</button>
-      <p id="form-msg" class="form-msg"></p>
     </form>
     <p id="form-msg"></p>
-
   </section>
 
   <!-- 🦶 Minimal Footer -->
   <footer class="footer">
     <p>© 2025 FocusFlow • Built for the Web Dev Lab</p>
   </footer>
+  
+  <!-- Guest Mode Popup Message -->
+  <div class="modal-backdrop" id="guest-modal-backdrop">
+    <div class="modal-content">
+        <p>Your progress will be saved locally.</p>
+        <p class="small-text">Redirecting you to the tracker...</p>
+    </div>
+  </div>
 
   <!-- 🔗 Script -->
-  <script src="script.js"></script>
+  <script type="module" src="script.js"></script>
 </body>
 </html>
